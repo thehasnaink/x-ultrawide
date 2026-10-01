@@ -1,0 +1,65 @@
+/* ---- Home timeline layout ------------------------------------------- */
+
+/* Lift X's fixed widths on the primary column and every wrapper above it, up
+   to <main>. Done structurally (not via page-script tags) so the column is
+   already full width on the very first frame instead of jumping wider once the
+   list has loaded. The data-xs-wide tags the page script adds are a harmless
+   backstop. */
+html[data-xs-on] main :is([data-testid="primaryColumn"], :has([data-testid="primaryColumn"])),
+html[data-xs-on] [data-xs-wide] {
+  width: 100% !important;
+  max-width: none !important;
+  flex-grow: 1 !important;
+}
+
+/* Right sidebar: out of the layout and invisible, except the two pieces we
+   re-home (search -> top bar, trends -> first column). z-index lifts the
+   column above the feed strip so those pieces paint over it. */
+html[data-xs-on] [data-testid="sidebarColumn"] {
+  position: absolute !important;
+  width: 0 !important;
+  min-width: 0 !important;
+  height: 0 !important;
+  overflow: visible !important;
+  visibility: hidden !important;
+  z-index: 4 !important;
+}
+html[data-xs-on] [data-xs-search],
+html[data-xs-on] [data-xs-search] *,
+html[data-xs-on] [data-xs-trends],
+html[data-xs-on] [data-xs-trends] * {
+  visibility: visible !important;
+}
+
+/* Top bar: the tabs on the left are a fixed 600px wide (X's default), the
+   search sits at the right edge at its own 350px width. The bar's own
+   full-width bottom stroke is left alone, so it runs under both. */
+html[data-xs-on] [data-xs-tabs] {
+  flex: 0 0 auto !important;
+  /* A fixed 600px (X's own default width) for the whole left section: this box
+     plus the 53px "+" button after it. Independent of the card width. */
+  width: calc(600px - 53px) !important;
+  max-width: none !important;
+}
+html[data-xs-on] [data-xs-search] {
+  position: fixed !important;
+  top: 5px !important;
+  left: auto !important;
+  right: var(--xs-pad, 12px) !important;
+  width: 350px !important; /* X's own width for the search box */
+  margin: 0 !important;
+  z-index: 10;
+}
+
+/* The page doesn't scroll (the board is fixed and the page script moves the
+   cards), so the native vertical scrollbar would only mislead. */
+html[data-xs-on],
+html[data-xs-on] body {
+  overflow: hidden !important;
+}
+
+/* No vertical strokes on either side of the feed. */
+html[data-xs-on] [data-testid="primaryColumn"] {
+  border-left-width: 0 !important;
+  border-right-width: 0 !important;
+}

@@ -1,0 +1,41 @@
+/* The composer and trends cards become the first two cards of column 0. The
+   page script positions them with a transform and clips them at the strip's
+   edge as the view scrolls. */
+html[data-xs-on] [data-xs-composer],
+html[data-xs-on] [data-xs-trends] {
+  position: fixed !important;
+  left: 0 !important;
+  top: 0 !important;
+  width: var(--xs-colw) !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+  background: var(--xs-bg, #000);
+  border-radius: 14px;
+  overflow: hidden;
+  z-index: 2;
+}
+html[data-xs-on] [data-xs-composer],
+html[data-xs-on] [data-xs-trends] {
+  box-shadow: 0 0 0 1px rgb(83 100 113 / 0.35);
+}
+html[data-xs-on] [data-xs-trends] {
+  max-height: calc(var(--xs-colh) - 280px);
+  overflow-y: auto;
+}
+
+/* Until the page script has placed them, the composer and trends cards stay
+   hidden instead of piling up at the top-left corner. (Higher specificity than
+   the sidebar's visibility override in layout.css.) */
+html[data-xs-on] [data-xs-composer]:not([data-xs-placed]),
+html[data-xs-on] [data-xs-trends]:not([data-xs-placed]),
+html[data-xs-on] [data-xs-trends]:not([data-xs-placed]) * {
+  visibility: hidden !important;
+}
+/* X re-creates the composer block on tab switches. A new one has no
+   data-xs-* tags yet, so catch it structurally (it is a direct child of the
+   column's content wrapper that contains the tweet textarea) and keep it
+   hidden until the page script has tagged and placed it. */
+html[data-xs-on] [data-testid="primaryColumn"] > div > div:has([data-testid="tweetTextarea_0"]):not([data-xs-placed]),
+html[data-xs-on] [data-testid="primaryColumn"] > div > :nth-child(3):not([data-xs-placed]) {
+  visibility: hidden !important;
+}

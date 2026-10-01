@@ -1,0 +1,19 @@
+{
+  "name": "x-ultrawide",
+  "private": true,
+  "version": "1.0.0",
+  "license": "MIT",
+  "type": "module",
+  "description": "Chrome extension: X's home timeline as a full-width masonry. Sources in src/, popup UI in ui/, built by scripts/build.mjs.",
+  "scripts": {
+    "setup": "npm install && npm --prefix ui install",
+    "build": "node scripts/build.mjs",
+    "dev": "node scripts/build.mjs --watch",
+    "release": "node scripts/build.mjs --release",
+    "ui:dev": "npm --prefix ui run dev"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "sharp": "^0.35.5"
+  }
+}

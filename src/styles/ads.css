@@ -1,0 +1,5 @@
+/* Ads (promoted / boosted posts, promoted trends): the page script tags them
+   and they are removed from the board. */
+html[data-xs-on] [data-xs-ad] {
+  display: none !important;
+}

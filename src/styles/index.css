@@ -1,0 +1,12 @@
+/* Everything here is gated on html[data-xs-on], which the page script sets only
+   while it is driving the home timeline (and the dialogs opened over it), so
+   every other page is left exactly as X renders it.
+
+   The partials are bundled in this order into content.css. */
+
+@import "./nav.css";
+@import "./layout.css";
+@import "./pinned.css";
+@import "./strip.css";
+@import "./scrollbar.css";
+@import "./ads.css";

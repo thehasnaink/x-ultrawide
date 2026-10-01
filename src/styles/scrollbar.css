@@ -1,0 +1,43 @@
+/* Horizontal scrollbar (created by the page script, sits on <body>) along the
+   bottom of the board: it shows where you are and can be dragged or clicked. */
+#xs-hbar {
+  display: none;
+}
+html[data-xs-on] #xs-hbar.xs-show {
+  display: block;
+  position: fixed;
+  left: calc(var(--xs-l) + var(--xs-pad, 12px));
+  width: calc(var(--xs-w) - 2 * var(--xs-pad, 12px));
+  bottom: 2px;
+  height: 8px;
+  /* X's dialog layer (#layers) is z-index 1 at the root. This bar sits on
+     <body> directly, so anything above 0 would paint over a compose dialog's
+     backdrop. 0 still beats the page (later in the DOM) but not the dialog. */
+  z-index: 0;
+  border-radius: 6px;
+  /* Shades of the page's own text colour (--xs-fg), so it reads on light, dim
+     and lights-out themes alike. */
+  background: color-mix(in srgb, var(--xs-fg, #fff) 7%, transparent);
+  cursor: pointer;
+  transition: height 0.12s ease, background 0.12s ease;
+  touch-action: none;
+}
+html[data-xs-on] #xs-hbar.xs-show:hover,
+html[data-xs-on] #xs-hbar.xs-drag {
+  height: 12px;
+  background: color-mix(in srgb, var(--xs-fg, #fff) 11%, transparent);
+}
+#xs-hbar .xs-hthumb {
+  height: 100%;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--xs-fg, #fff) 30%, transparent);
+  cursor: grab;
+  will-change: transform;
+}
+#xs-hbar:hover .xs-hthumb {
+  background: color-mix(in srgb, var(--xs-fg, #fff) 50%, transparent);
+}
+#xs-hbar.xs-drag .xs-hthumb {
+  background: color-mix(in srgb, var(--xs-fg, #fff) 65%, transparent);
+  cursor: grabbing;
+}

@@ -1,0 +1,116 @@
+/* ---- Left nav: icons only ------------------------------------------- */
+
+/* Each nav item is <a|button><div><div icon/><div label/></div></…>: drop the label. */
+html[data-xs-on] header[role="banner"] nav a > div > div:nth-child(2),
+html[data-xs-on] header[role="banner"] nav button > div > div:nth-child(2) {
+  display: none !important;
+}
+
+/* X sizes the nav with fixed 275px containers plus a 60px left margin, and
+   the real nav is position:fixed so it adds no width of its own. Let the
+   containers shrink to the icons and give the header an explicit narrow width
+   so the page content starts right next to them. */
+html[data-xs-on] header[role="banner"] {
+  flex: 0 0 76px !important;
+  width: 76px !important;
+  min-width: 76px !important;
+  align-items: flex-start !important; /* X right-aligns it, which pushes the fixed nav over the feed */
+}
+html[data-xs-on] header[role="banner"] > div {
+  width: auto !important;
+  margin-left: 0 !important;
+}
+/* Centre the menu in its rail. X left-aligns each item inside a 60px column, so
+   items of different widths (logo 52, icons 50, account 56) all end up off-centre
+   by different amounts. Centre them all, and make the column symmetric: 8px
+   gutter on the left, 8px on the right plus the 1px divider. */
+html[data-xs-on] header[role="banner"] > div > div > div,
+html[data-xs-on] header[role="banner"] > div > div > div :is(div, nav):not(a *, button *) {
+  align-items: center !important;
+}
+/* Only below the position:fixed container (header > div > div). Centring its
+   own parents would also centre where the fixed box sits by default, around a
+   zero-width parent, and shove the whole menu off the left edge of the screen.
+   And never inside a link or button: X builds the avatar from layered boxes
+   that depend on stretching to full width, so centring them collapses the
+   avatar to nothing. */
+html[data-xs-on] header[role="banner"] > div > div > div {
+  padding-left: 8px !important;
+  padding-right: 9px !important;
+}
+
+/* The divider between the menu and the feed: X draws it as the feed column's
+   left border, which this extension removes, so it lives on the menu's right
+   edge instead (same colour as X's, read from the page for the current theme). */
+html[data-xs-on] header[role="banner"] {
+  box-sizing: border-box !important;
+  border-right: 1px solid var(--xs-stroke, rgb(47 51 54)) !important;
+}
+html[data-xs-on] header[role="banner"] > div > div {
+  width: 76px !important;
+}
+/* Links stretch to their container by default; keep each to its icon so it
+   doesn't cover the feed next to it. The inner wrappers also carry fixed
+   widths (259px) that would otherwise sit invisibly on top of the feed and
+   swallow clicks meant for the first column. */
+html[data-xs-on] header[role="banner"] nav a {
+  width: fit-content !important;
+}
+html[data-xs-on] header[role="banner"] :is(div, nav) {
+  max-width: 76px !important;
+}
+
+/* The floating Grok and chat buttons sit on top of the cards, and both are
+   already in the nav. */
+html[data-xs-on] [data-testid="GrokDrawer"],
+html[data-xs-on] [data-testid="chat-drawer-root"] {
+  display: none !important;
+}
+
+/* Account button: avatar only (hide name, handle and the ... menu glyph).
+   The button itself must shrink too, or its hover highlight keeps the old
+   259px-wide pill shape. */
+html[data-xs-on] [data-testid="SideNav_AccountSwitcher_Button"] > div:nth-child(n + 2) {
+  display: none !important;
+}
+html[data-xs-on] [data-testid="SideNav_AccountSwitcher_Button"] {
+  width: 56px !important;
+  min-width: 0 !important;
+  max-width: 56px !important;
+  height: 56px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  justify-content: center !important;
+  border-radius: 50% !important;
+}
+html[data-xs-on] [data-testid="SideNav_AccountSwitcher_Button"] > div:first-child {
+  width: auto !important;
+}
+
+/* Post button: a round "+" instead of the wide pill. The "+" is drawn on the
+   element just inside the link and takes its colour (color: inherit), which is
+   X's own label colour for the current theme: white on the black light-mode
+   button, dark on the white dark-mode one. (The <a> itself has the default
+   link colour, so a colour set there is wrong in one theme or the other.) */
+html[data-xs-on] [data-testid="SideNav_NewTweet_Button"] {
+  width: 52px !important;
+  min-width: 52px !important;
+  padding: 0 !important;
+}
+html[data-xs-on] [data-testid="SideNav_NewTweet_Button"] span {
+  font-size: 0 !important;
+}
+html[data-xs-on] [data-testid="SideNav_NewTweet_Button"] > div {
+  position: relative;
+}
+html[data-xs-on] [data-testid="SideNav_NewTweet_Button"] > div::after {
+  content: "+";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+  line-height: 1;
+  color: inherit;
+}

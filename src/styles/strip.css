@@ -1,0 +1,75 @@
+/* The list root becomes a fixed strip under the tab bar. Its size and
+   position come from variables the page script keeps up to date.
+
+   It is matched structurally as well as by the script's data-xs-strip tag: X
+   keys the list by timeline, so every tab switch mounts a brand-new list
+   element, and tagging it takes a frame. Styling it from the start (and
+   keeping it hidden until placed) means X's native layout never flashes. */
+html[data-xs-on] :is([data-xs-strip], [data-testid="primaryColumn"] section[role="region"] > div > div) {
+  position: fixed !important;
+  left: var(--xs-l) !important;
+  top: var(--xs-t) !important;
+  width: var(--xs-w) !important;
+  height: var(--xs-h) !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  background: var(--xs-bg, #000);
+  z-index: 3;
+}
+html[data-xs-on] [data-testid="primaryColumn"] section[role="region"] > div > div:not([data-xs-ready]) {
+  visibility: hidden !important;
+}
+/* The page script moves the view by scrolling this box. Its scroll range only
+   extends as far as the cards that are mounted, so a 1px marker out at the end
+   of the board (--xs-total) keeps the whole range available. */
+html[data-xs-on] :is([data-xs-strip], [data-testid="primaryColumn"] section[role="region"] > div > div)::after {
+  content: "";
+  position: absolute;
+  left: var(--xs-total, 0px);
+  top: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+/* Vertical mode: the strip itself scrolls (natively, so wheel, trackpad,
+   touch and scrollbar dragging all just work), and cards are not capped to the
+   strip's height. The marker that keeps the scroll range open sits at the
+   bottom of the board instead of the right. */
+html[data-xs-on][data-xs-mode="v"] :is([data-xs-strip], [data-testid="primaryColumn"] section[role="region"] > div > div) {
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--xs-fg, #fff) 35%, transparent) transparent;
+}
+html[data-xs-on][data-xs-mode="v"] :is([data-xs-strip], [data-testid="primaryColumn"] section[role="region"] > div > div)::after {
+  left: 0;
+  top: var(--xs-total-h, 0px);
+}
+html[data-xs-on][data-xs-mode="v"] :is([data-xs-strip], [data-testid="primaryColumn"] section[role="region"] > div > div) > div {
+  max-height: none;
+  overflow: visible;
+}
+
+/* Each post is a fixed-width card. X positions it with position:absolute and
+   an inline transform; the page script adds the independent `translate`
+   property to move it into its column. X's own transform transition would
+   animate against that, so turn it off. */
+html[data-xs-on] :is([data-xs-strip], [data-testid="primaryColumn"] section[role="region"] > div > div) > div {
+  width: var(--xs-colw) !important;
+  max-height: var(--xs-colh);
+  overflow-x: hidden;
+  overflow-y: auto;
+  box-sizing: border-box;
+  border-radius: 14px;
+  box-shadow: 0 0 0 1px rgb(83 100 113 / 0.35);
+  transition: none !important;
+  scrollbar-width: thin;
+  /* Each card is moved every frame; give it its own compositor layer so that
+     is a cheap layer move instead of a repaint of the whole card. */
+  will-change: translate;
+}
+
+html[data-xs-on] :is([data-xs-strip], [data-testid="primaryColumn"] section[role="region"] > div > div) article {
+  border-bottom: 0 !important;
+}

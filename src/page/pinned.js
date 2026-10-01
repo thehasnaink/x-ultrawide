@@ -1,0 +1,144 @@
+// The elements outside the list that are part of the layout (see PINNED in
+// constants.js): finding them, tagging them for the CSS, and placing the two
+// that become cards in column 0.
+//
+// X re-renders these, so they are (re)discovered whenever the DOM changes and
+// tagged with data-xs-*.
+
+import { GAP, PAD, PINNED } from "./constants.js";
+import { blocking } from "./config.js";
+import { state } from "./state.js";
+import { root } from "./util.js";
+
+// X re-creates some of these on tab switches. Re-tag on the very next frame
+// after any DOM change (not on a timer), or the new element paints untagged
+// in X's native layout for a moment.
+export function watchPinned() {
+  new MutationObserver(() => {
+    state.pinnedDirty = true;
+  }).observe(root, { childList: true, subtree: true });
+}
+
+function findPinned() {
+  const pc = document.querySelector('[data-testid="primaryColumn"]');
+  const found = {};
+  if (!pc) return found;
+  const tl = pc.querySelector('[role="tablist"]');
+  for (let e = tl; e && e !== pc; e = e.parentElement) {
+    if (getComputedStyle(e).position === "sticky") {
+      found.topbar = e;
+      break;
+    }
+  }
+  // The tab bar's row is the ancestor that carries the bottom stroke; the
+  // child of it that holds the tablist is the tabs container.
+  for (let e = tl, child = null; e && e !== pc; child = e, e = e.parentElement) {
+    if (child && parseFloat(getComputedStyle(e).borderBottomWidth) > 0) {
+      found.tabs = child;
+      break;
+    }
+  }
+  // The composer block is a sibling of the sticky tab bar: the first tall
+  // child after it, before the list. Found by position, not by content: on a
+  // fresh load X first renders it as a skeleton with no textarea or button
+  // (for over a second), which a content-based lookup would miss, leaving
+  // X's native composer visible.
+  const wrap = found.topbar && found.topbar.parentElement;
+  if (wrap) {
+    let after = false;
+    for (const k of wrap.children) {
+      if (k === found.topbar) {
+        after = true;
+        continue;
+      }
+      if (!after) continue;
+      if (k.querySelector('section[role="region"]')) break; // reached the list
+      if (k.offsetHeight >= 40) {
+        found.composer = k;
+        break;
+      }
+    }
+  }
+  const side = document.querySelector('[data-testid="sidebarColumn"]');
+  if (side) {
+    found.search = side.querySelector('form[role="search"]');
+    const trend = side.querySelector('[data-testid="trend"]');
+    found.trends = trend && trend.closest("section");
+  }
+  return found;
+}
+
+export function markPinned() {
+  const now = performance.now();
+  if (!state.pinnedDirty && now - state.pinnedAt < 500) return;
+  state.pinnedDirty = false;
+  state.pinnedAt = now;
+  const found = findPinned();
+  const pinned = state.pinned;
+  for (const name of PINNED) {
+    const next = found[name] || null;
+    const prev = pinned[name];
+    if (prev === next) continue;
+    if (prev) clearPinned(prev, name);
+    if (next) next.setAttribute("data-xs-" + name, "");
+    pinned[name] = next;
+  }
+  // The trends card carries a "Promoted by ..." entry too: same kind of ad.
+  if (pinned.trends) {
+    for (const item of pinned.trends.querySelectorAll('[data-testid="trend"]')) {
+      const promo = blocking() && /\bPromoted\b/.test(item.innerText || "");
+      if (promo !== item.hasAttribute("data-xs-ad")) item.toggleAttribute("data-xs-ad", promo);
+    }
+  }
+}
+
+function clearPinned(el, name) {
+  el.removeAttribute("data-xs-" + name);
+  el.removeAttribute("data-xs-placed");
+  el.style.transform = "";
+  el.style.clipPath = "";
+}
+
+export function clearAllPinned() {
+  for (const name of PINNED) {
+    if (state.pinned[name]) clearPinned(state.pinned[name], name);
+    state.pinned[name] = null;
+  }
+}
+
+export function pinnedHeights() {
+  const live = (n) => (n && n.isConnected ? n.offsetHeight : 0);
+  return { hC: live(state.pinned.composer), hT: live(state.pinned.trends) };
+}
+
+// Horizontal mode: pin the composer and trends cards to the top of column 0;
+// they scroll sideways with it and are clipped at the strip's left edge.
+export function placePinned(g, x, hC, hT) {
+  const { composer, trends } = state.pinned;
+  let py = 0;
+  for (const [node, hh] of [[composer, hC], [trends, hT]]) {
+    if (!node || !hh) continue;
+    const left = Math.round(g.pr.left + PAD - x);
+    node.style.transform = `translate(${left}px, ${g.T + PAD + py}px)`;
+    const clipL = Math.max(0, Math.round(g.pr.left - left));
+    node.style.clipPath = clipL > 0 ? `inset(0 0 0 ${clipL}px)` : "";
+    node.setAttribute("data-xs-placed", "");
+    py += hh + GAP;
+  }
+}
+
+// Vertical mode: the cards in column 0 scroll away with the content, and are
+// clipped at the top edge of the strip.
+export function placePinnedV(g, y, hC, hT) {
+  const { composer, trends } = state.pinned;
+  let py = 0;
+  for (const [node, hh] of [[composer, hC], [trends, hT]]) {
+    if (!node || !hh) continue;
+    const topPx = g.T + PAD + py - y;
+    node.style.transform = `translate(${Math.round(g.pr.left + PAD)}px, ${Math.round(topPx)}px)`;
+    const clipT = Math.max(0, Math.round(g.T - topPx));
+    node.style.clipPath = clipT > 0 ? `inset(${Math.min(clipT, hh)}px 0 0 0)` : "";
+    node.setAttribute("data-xs-placed", "");
+    py += hh + GAP;
+  }
+}
