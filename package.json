@@ -3,6 +3,9 @@
   "private": true,
   "version": "1.0.0",
   "license": "MIT",
+  "homepage": "https://chromewebstore.google.com/detail/hdggonhihcinedcgkopmfofikemmpbge",
+  "repository": { "type": "git", "url": "git+https://github.com/thehasnaink/x-ultrawide.git" },
+  "bugs": { "url": "https://github.com/thehasnaink/x-ultrawide/issues" },
   "type": "module",
   "description": "Chrome extension: X's home timeline as a full-width masonry. Sources in src/, popup UI in ui/, built by scripts/build.mjs.",
   "scripts": {

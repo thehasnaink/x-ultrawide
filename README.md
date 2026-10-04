@@ -10,8 +10,14 @@
 </p>
 
 <p align="center">
-  <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue" />
+  <a href="https://chromewebstore.google.com/detail/hdggonhihcinedcgkopmfofikemmpbge"><img alt="Chrome Web Store version" src="https://img.shields.io/chrome-web-store/v/hdggonhihcinedcgkopmfofikemmpbge?label=Chrome%20Web%20Store" /></a>
+  <a href="https://chromewebstore.google.com/detail/hdggonhihcinedcgkopmfofikemmpbge"><img alt="Chrome Web Store users" src="https://img.shields.io/chrome-web-store/users/hdggonhihcinedcgkopmfofikemmpbge" /></a>
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue" /></a>
   <img alt="Manifest V3" src="https://img.shields.io/badge/Chrome-Manifest%20V3-green" />
+</p>
+
+<p align="center">
+  <a href="https://chromewebstore.google.com/detail/hdggonhihcinedcgkopmfofikemmpbge"><b>Install from the Chrome Web Store</b></a>
 </p>
 
 ---
@@ -34,12 +40,13 @@ packs the posts into columns that use the whole screen.
 
 ## Install
 
-**From the Chrome Web Store:** _link coming once the listing is published._
+**From the Chrome Web Store (recommended):** [install X Ultrawide](https://chromewebstore.google.com/detail/hdggonhihcinedcgkopmfofikemmpbge), then open
+[x.com/home](https://x.com/home). Updates arrive automatically.
 
 **From source** (any Chromium browser with extension support):
 
 ```
-git clone <this repository>
+git clone https://github.com/thehasnaink/x-ultrawide.git
 cd x-ultrawide
 npm run setup
 npm run build
@@ -118,7 +125,7 @@ The release build is minified, not obfuscated (the Chrome Web Store rejects obfu
 ## Known limits
 
 - It depends on X's current page structure and internal list implementation. When X changes its front
-  end, parts of the layout can break until the extension is updated. Please open an issue with details.
+  end, parts of the layout can break until the extension is updated. Please [open an issue](https://github.com/thehasnaink/x-ultrawide/issues) with details.
 - It only changes the Home timeline (the "For you" and "Following" style tabs). Profiles, search
   results, lists and bookmarks keep X's normal layout.
 - Chrome and other Chromium browsers only.
@@ -131,7 +138,7 @@ them out or, if you enable ad blocking, hide them. Nothing is stored or sent any
 
 ## Contributing
 
-Issues and pull requests are welcome. For a layout bug, include your screen size, the card width, the
+[Issues](https://github.com/thehasnaink/x-ultrawide/issues) and pull requests are welcome. For a layout bug, include your screen size, the card width, the
 scroll mode, and what you were doing. Before opening a pull request, run `npm run build` and
 `npm run release` and make sure both finish without errors.
 
