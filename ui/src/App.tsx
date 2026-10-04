@@ -9,6 +9,7 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { LayoutPreview } from "@/components/layout-preview"
+import { Separator } from "@/components/ui/separator"
 import { Slider } from "@/components/ui/slider"
 import { Switch } from "@/components/ui/switch"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
@@ -131,6 +132,21 @@ export default function App() {
 
         <p className="text-center text-xs text-muted-foreground">
           Applies to your Home feed. Changes are instant.
+        </p>
+
+        <Separator />
+
+        <p className="text-center text-xs text-muted-foreground">
+          Follow{" "}
+          <a
+            href="https://x.com/TheHasnainK"
+            target="_blank"
+            rel="noreferrer"
+            className="font-medium text-foreground underline-offset-4 hover:underline"
+          >
+            @TheHasnainK
+          </a>{" "}
+          on X
         </p>
       </div>
     </main>

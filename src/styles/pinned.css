@@ -23,6 +23,38 @@ html[data-xs-on] [data-xs-trends] {
   overflow-y: auto;
 }
 
+/* Vertical mode: the strip scrolls natively, so these two cards are tied to its
+   scroll position here instead of being moved by script (which runs a frame
+   behind the browser's own scrolling and made them lag the posts beside them).
+   The strip names its scroll timeline; the name is lifted to <html> so the
+   cards, which live elsewhere in the page, can use it. Over the strip's whole
+   scroll range (--xs-range) a card moves up by that range, and its top is
+   clipped by however far it has passed the strip's top edge (--xs-off is how
+   far below that edge it rests; a negative inset clips nothing).
+   Two animations, not one: moving is done by the compositor, clipping is not,
+   and an animation is only handed to the compositor if all of it can be. */
+@supports (animation-timeline: scroll()) and (timeline-scope: --x) {
+  html[data-xs-on][data-xs-mode="v"] {
+    timeline-scope: --xs-vscroll;
+  }
+  html[data-xs-on][data-xs-mode="v"] :is([data-xs-strip], [data-testid="primaryColumn"] section[role="region"] > div > div) {
+    scroll-timeline: --xs-vscroll block;
+  }
+  html[data-xs-on][data-xs-mode="v"] :is([data-xs-composer], [data-xs-trends]) {
+    animation: xs-vmove linear both, xs-vclip linear both;
+    animation-timeline: --xs-vscroll, --xs-vscroll;
+    will-change: translate;
+  }
+  @keyframes xs-vmove {
+    from { translate: 0 0; }
+    to { translate: 0 calc(-1 * var(--xs-range, 0px)); }
+  }
+  @keyframes xs-vclip {
+    from { clip-path: inset(calc(-1 * var(--xs-off, 0px)) -2px -2px -2px); }
+    to { clip-path: inset(calc(var(--xs-range, 0px) - var(--xs-off, 0px)) -2px -2px -2px); }
+  }
+}
+
 /* Until the page script has placed them, the composer and trends cards stay
    hidden instead of piling up at the top-left corner. (Higher specificity than
    the sidebar's visibility override in layout.css.) */

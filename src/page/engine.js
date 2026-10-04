@@ -18,6 +18,7 @@ import { GAP, OVERLAY_ROUTE, PAD } from "./constants.js";
 import { modeOf, readCfg } from "./config.js";
 import { stepHorizontal } from "./horizontal.js";
 import { findLiveScroller } from "./scroller.js";
+import { stableOrder } from "./order.js";
 import { hideBar } from "./scrollbar.js";
 import { clearAllPinned, markPinned, pinnedHeights, placePinned } from "./pinned.js";
 import { state } from "./state.js";
@@ -35,9 +36,17 @@ function geometry(pc) {
   const VW = Math.floor(pr.width);
   const stripH = Math.max(300, window.innerHeight - T);
   const Hc = stripH - 2 * PAD;
-  const cols = Math.max(1, Math.round((VW - 2 * PAD + GAP) / (state.cfg.cardWidth + GAP)));
-  const Wc = Math.floor((VW - 2 * PAD - GAP * (cols - 1)) / cols);
-  return { pr, T, VW, stripH, Hc, cols, Wc, stride: Wc + GAP };
+  // Cards are exactly as wide as the setting says, so the slider is followed
+  // pixel for pixel (rounding to a whole number of columns made the width jump
+  // only when the column count changed, and sit still in between).
+  const Wc = Math.round(Math.min(Math.max(state.cfg.cardWidth, 240), VW - 2 * PAD));
+  const stride = Wc + GAP;
+  // whole columns that fit; in horizontal mode the next one peeks in at the right
+  const cols = Math.max(1, Math.floor((VW - 2 * PAD + GAP) / stride));
+  // Left edge of the board inside the strip. Vertical mode has a fixed set of
+  // columns, so the space left over is split evenly on both sides.
+  const ox = modeOf(state.cfg) === "v" ? Math.max(PAD, Math.floor((VW - (cols * stride - GAP)) / 2)) : PAD;
+  return { pr, T, VW, stripH, Hc, cols, Wc, stride, ox };
 }
 
 // The page's theme colours (background, text, divider), re-read at most every
@@ -114,7 +123,39 @@ function attach(S, el) {
     el.scrollTo({ top: 0 });
   };
   const proxy = Object.create(vp);
-  proxy.getRect = () => new Rect(el.getBoundingClientRect().top + st.top, st.height);
+  // X asks for this rect to decide which posts to keep mounted. The answer is
+  // worked out once a frame, in list coordinates. But X also asks the moment
+  // its list changes (more posts loaded, and with them a reshuffle), which is
+  // before our next frame: answered with the old numbers, it would unmount the
+  // posts on screen and mount others for a frame, a visible blank. So when the
+  // list is not the one the numbers were worked out for, find the same posts in
+  // the new list first.
+  const rebase = (list) => {
+    st.winList = list;
+    const at = new Map();
+    for (let k = 0; k < list.length; k++) at.set(list[k].id, k);
+    const ks = [];
+    for (const id of st.winIds) if (at.has(id)) ks.push(at.get(id));
+    // the first that is still ahead of the one after it (not one X sent to the end)
+    let a = -1;
+    for (let i = 0; i < ks.length && a < 0; i++) if (i === ks.length - 1 || ks[i] < ks[i + 1]) a = ks[i];
+    if (a < 0) return;
+    const b = Math.min(list.length - 1, a + st.winIds.length - 1);
+    let top = 0;
+    let height = 0;
+    for (let k = 0; k <= b; k++) {
+      const h = S._getHeight(list[k]);
+      if (k < a) top += h;
+      else height += h;
+    }
+    st.top = top + 1;
+    st.height = Math.max(1, height - 2);
+  };
+  proxy.getRect = () => {
+    const list = S.props.list;
+    if (st.winIds && st.winList !== list) rebase(list);
+    return new Rect(el.getBoundingClientRect().top + st.top, st.height);
+  };
   proxy.scrollBy = () => {}; // X re-bases offsets itself; our rect is always in list coordinates
   proxy.scrollTo = (_x, y) => {
     if (!y) goHome();
@@ -160,7 +201,10 @@ function attach(S, el) {
   }
   el.setAttribute("data-xs-strip", "");
 
-  state.current = { S, el, vp, st, savedRatios, savedDefaults, last: "", hc: new Map(), hcW: 0, mode: modeOf(state.cfg), goHome };
+  // Posts keep the place they first had (see order.js).
+  const restoreProps = stableOrder().install(S);
+
+  state.current = { S, el, vp, st, savedRatios, savedDefaults, restoreProps, last: "", hc: new Map(), hcW: 0, mode: modeOf(state.cfg), goHome };
   S._scheduleCriticalUpdate();
 }
 
@@ -172,6 +216,9 @@ function detach() {
   state.current = null;
   const { S, el, vp, savedRatios, savedDefaults } = c;
   S._viewport = vp;
+  try {
+    c.restoreProps();
+  } catch {}
   try {
     S.props.minimumOffscreenToViewportRatio = savedRatios.min;
     S.props.preferredOffscreenToViewportRatio = savedRatios.pref;

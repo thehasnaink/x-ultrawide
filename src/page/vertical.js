@@ -4,13 +4,13 @@
 // tell X which posts are on screen.
 
 import { GAP, PAD } from "./constants.js";
-import { isAdId, measureCells } from "./ads.js";
+import { anchorShift, heightOf, isAdId, measureCells } from "./ads.js";
 import { pinnedHeights, placePinnedV } from "./pinned.js";
 import { hideBar } from "./scrollbar.js";
 import { state } from "./state.js";
 import { parseT, root } from "./util.js";
 
-function packMasonry(S, cols, reserved, hc) {
+function packMasonry(S, cols, reserved, current) {
   const list = S.props.list;
   const n = list.length;
   const colOf = new Int32Array(n).fill(-1); // -1: not on the board (an ad)
@@ -23,8 +23,7 @@ function packMasonry(S, cols, reserved, hc) {
     const raw = S._getHeight(list[k]);
     tpos[k + 1] = tpos[k] + raw; // X's own coordinates, for the render window
     if (isAdId(list[k].id)) continue;
-    const own = hc.get(list[k].id);
-    const h = own === undefined ? raw : own;
+    const h = heightOf(S, list[k], current);
     let c = 0;
     for (let i = 1; i < cols; i++) if (colH[i] < colH[c]) c = i;
     const t = colH[c] > 0 ? colH[c] + GAP : 0;
@@ -46,7 +45,7 @@ export function stepVertical(g) {
   measureCells(current, Wc);
   const { hC, hT } = pinnedHeights();
   const reserved = hC + (hC && hT ? GAP : 0) + hT;
-  const L = packMasonry(S, cols, reserved, current.hc);
+  const L = packMasonry(S, cols, reserved, current);
   const list = S.props.list;
   const index = new Map();
   for (let k = 0; k < L.n; k++) index.set(list[k].id, k);
@@ -66,6 +65,19 @@ export function stepVertical(g) {
     el.scrollTop = 0;
   }
 
+  // The card width changed, so every card has a new height and place: go back
+  // to the post that was at the top of the view.
+  if (current.vW && current.vW !== Wc && !st.pending) {
+    const saved = state.savedPos.get(st.key);
+    if (saved) {
+      st.pending = saved.anchorId;
+      st.pendingOffset = saved.offset || 0;
+      st.pendingFrames = 0;
+      st.pendingStable = 0;
+    }
+  }
+  current.vW = Wc;
+
   // Restore the saved position (see the horizontal step for why it keeps
   // re-applying until the geometry has settled).
   if (st.pending) {
@@ -83,6 +95,13 @@ export function stepVertical(g) {
     }
   }
 
+  // The board was re-packed under the view (X reordered its list, or posts
+  // above changed height): scroll by as much as the posts on screen moved.
+  if (!st.pending) {
+    const shift = anchorShift(st.anchors, index, (k) => (L.colOf[k] < 0 ? null : L.top[k]));
+    if (Math.abs(shift) >= 1) el.scrollTop += shift;
+  }
+
   const y = el.scrollTop;
   st.y = y;
 
@@ -90,12 +109,16 @@ export function stepVertical(g) {
   // the view, and how far below. (Anchoring on a post that is mostly scrolled
   // out above the view would restore to that post's top, a card-height off.)
   if (!st.pending && L.n) {
-    for (let k = 0; k < L.n; k++) {
+    // ...and, for the next frame, the first few posts at or below the top of
+    // the view, each with its top.
+    const anchors = [];
+    for (let k = 0; k < L.n && anchors.length < 6; k++) {
       if (L.colOf[k] >= 0 && L.top[k] >= y) {
-        state.savedPos.set(st.key, { anchorId: list[k].id, offset: L.top[k] - y });
-        break;
+        if (!anchors.length) state.savedPos.set(st.key, { anchorId: list[k].id, offset: L.top[k] - y });
+        anchors.push([list[k].id, L.top[k]]);
       }
     }
+    st.anchors = anchors;
   }
 
   // Tell X which posts are on screen: those overlapping the visible range
@@ -115,6 +138,13 @@ export function stepVertical(g) {
   if (k0 >= 0) {
     st.top = L.tpos[k0] + 1;
     st.height = Math.max(1, L.tpos[k1 + 1] - L.tpos[k0] - 2);
+    // which posts those are, so the rect can be re-found if X changes its list
+    // before the next frame (see getRect in engine.js)
+    if (k0 !== st.k0 || k1 !== st.k1 || st.winList !== list) {
+      st.winList = list;
+      st.winIds = [];
+      for (let k = k0; k <= k1; k++) st.winIds.push(list[k].id);
+    }
     if (k0 !== st.k0 || k1 !== st.k1) {
       st.k0 = k0;
       st.k1 = k1;
@@ -130,7 +160,7 @@ export function stepVertical(g) {
     if (cell.hasAttribute("data-xs-ad")) continue;
     const t = parseT(cell);
     if (t === null) continue;
-    const v = `${PAD + L.colOf[k] * g.stride}px ${PAD + L.top[k] - t}px`;
+    const v = `${g.ox + L.colOf[k] * g.stride}px ${PAD + L.top[k] - t}px`;
     if (cell.__xs !== v) {
       cell.__xs = v;
       cell.style.translate = v;
@@ -138,7 +168,7 @@ export function stepVertical(g) {
     st.placed = true;
   }
 
-  placePinnedV(g, y, hC, hT);
+  placePinnedV(g, y, hC, hT, Math.max(0, el.scrollHeight - el.clientHeight));
   hideBar();
   if (__DEV__) window.__xsDbg = { mode: "v", y, total, cols, Wc, n: L.n, key: st.key, pending: st.pending };
   if (st.placed && !el.hasAttribute("data-xs-ready")) el.setAttribute("data-xs-ready", "");

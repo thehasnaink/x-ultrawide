@@ -25,4 +25,12 @@ publish(initial);
 const load = () =>
   chrome.storage.sync.get(DEFAULTS, (s) => publish({ ...DEFAULTS, ...s }));
 load();
-chrome.storage.onChanged.addListener(load);
+// Settings live in storage.sync, which only allows a couple of writes a second:
+// too few for a slider being dragged. While it moves, the popup also writes the
+// current values to storage.local ("xsLive"), which has no such limit; whichever
+// changed last is what the page gets.
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === "local") {
+    if (changes.xsLive && changes.xsLive.newValue) publish({ ...DEFAULTS, ...changes.xsLive.newValue });
+  } else if (area === "sync") load();
+});

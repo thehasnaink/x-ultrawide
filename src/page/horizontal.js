@@ -4,7 +4,7 @@
 // screen.
 
 import { GAP, LOOKAHEAD, MAX_EXTRA_GAP, PAD, PREFETCH_COLS, SNAP_TOL } from "./constants.js";
-import { isAdId, measureCells } from "./ads.js";
+import { anchorShift, heightOf, isAdId, measureCells } from "./ads.js";
 import { pinnedHeights, placePinned } from "./pinned.js";
 import { updateBar } from "./scrollbar.js";
 import { state } from "./state.js";
@@ -33,7 +33,7 @@ function snapTarget(tx, stride, dir) {
 // `reserved` is the height already taken at the top of column 0 by the
 // pinned composer/trends cards. `hc` holds heights we measured ourselves,
 // which are fresher than X's (X updates its own a beat later).
-function pack(S, Hc, reserved, hc) {
+function pack(S, Hc, reserved, current) {
   const list = S.props.list;
   const n = list.length;
   const h = new Float64Array(n);
@@ -42,10 +42,8 @@ function pack(S, Hc, reserved, hc) {
   const y = new Float64Array(n);
   const placed = new Uint8Array(n);
   for (let k = 0; k < n; k++) {
-    const raw = S._getHeight(list[k]);
-    const own = hc.get(list[k].id);
-    h[k] = Math.min(own === undefined ? raw : own, Hc);
-    tpos[k + 1] = tpos[k] + raw; // X's own coordinates, for the render window
+    h[k] = Math.min(heightOf(S, list[k], current), Hc);
+    tpos[k + 1] = tpos[k] + S._getHeight(list[k]); // X's own coordinates, for the render window
     if (isAdId(list[k].id)) {
       // Left out of the board: never placed in a column (X still sees it in
       // its own list, so its render window and "load more" are unaffected).
@@ -116,11 +114,26 @@ export function stepHorizontal(g) {
   const { hC, hT } = pinnedHeights();
   const reserved = hC + (hC && hT ? GAP : 0) + hT;
 
-  const L = pack(S, Hc, reserved, hc);
+  const L = pack(S, Hc, reserved, current);
   const list = S.props.list;
   const index = new Map();
   for (let k = 0; k < L.n; k++) index.set(list[k].id, k);
   const maxX = Math.max(0, 2 * PAD + L.ncols * stride - GAP - VW);
+  // The board was re-packed under the view (X reordered its list, or posts
+  // changed height): move the view by as many columns as its posts moved.
+  if (!st.pending) {
+    const shift = anchorShift(st.anchors, index, (k) => (L.colOf[k] < 0 ? null : L.colOf[k]));
+    if (shift) {
+      st.x += shift * (current.stride || stride);
+      st.tx += shift * (current.stride || stride);
+    }
+  }
+
+  // The card width changed: stay on the same column instead of the same pixel.
+  if (current.stride && current.stride !== stride && !st.pending) {
+    st.tx = Math.round(st.tx / current.stride) * stride;
+    st.x = (st.x / current.stride) * stride;
+  }
   current.stride = stride;
   current.maxX = maxX;
 
@@ -162,6 +175,14 @@ export function stepHorizontal(g) {
     const jl = clamp(Math.round(st.tx / stride), 0, L.ncols - 1);
     const k = L.colMin[jl];
     if (k < L.n) state.savedPos.set(st.key, { anchorId: list[k].id });
+    // ...and, for the next frame, the posts at the left edge of the view with
+    // the column each is in: every post of the leftmost column, then the first
+    // post of the next two.
+    const j0 = clamp(Math.floor(st.x / stride + 0.001), 0, L.ncols - 1);
+    const anchors = [];
+    for (let i = L.colMin[j0]; i <= L.colMax[j0] && anchors.length < 6; i++) if (L.colOf[i] === j0) anchors.push([list[i].id, j0]);
+    for (let j = j0 + 1; j <= j0 + 2 && j < L.ncols; j++) if (L.colMin[j] < L.n) anchors.push([list[L.colMin[j]].id, j]);
+    st.anchors = anchors;
   }
 
   state.lastX = st.x;
@@ -196,6 +217,13 @@ export function stepHorizontal(g) {
       // not each time a measured height nudges the pixel values.
       st.top = L.tpos[k0] + 1;
       st.height = Math.max(1, L.tpos[k1 + 1] - L.tpos[k0] - 2);
+      // which posts those are, so the rect can be re-found if X changes its list
+      // before the next frame (see getRect in engine.js)
+      if (k0 !== st.k0 || k1 !== st.k1 || st.winList !== list) {
+        st.winList = list;
+        st.winIds = [];
+        for (let k = k0; k <= k1; k++) st.winIds.push(list[k].id);
+      }
       if (k0 !== st.k0 || k1 !== st.k1) {
         st.k0 = k0;
         st.k1 = k1;

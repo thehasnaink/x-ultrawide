@@ -23,6 +23,9 @@ html[data-xs-on] [data-testid="sidebarColumn"] {
   overflow: visible !important;
   visibility: hidden !important;
   z-index: 4 !important;
+  /* Being above the feed also puts it above the tab bar. Keep its contents to
+     the board below the bar, plus the search box's slot (set by the page script). */
+  clip-path: var(--xs-side-clip, none);
 }
 html[data-xs-on] [data-xs-search],
 html[data-xs-on] [data-xs-search] *,

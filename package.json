@@ -1,7 +1,7 @@
 {
   "name": "x-ultrawide",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "license": "MIT",
   "homepage": "https://chromewebstore.google.com/detail/hdggonhihcinedcgkopmfofikemmpbge",
   "repository": { "type": "git", "url": "git+https://github.com/thehasnaink/x-ultrawide.git" },

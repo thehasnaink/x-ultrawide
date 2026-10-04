@@ -73,3 +73,9 @@ html[data-xs-on] :is([data-xs-strip], [data-testid="primaryColumn"] section[role
 html[data-xs-on] :is([data-xs-strip], [data-testid="primaryColumn"] section[role="region"] > div > div) article {
   border-bottom: 0 !important;
 }
+/* X's divider between posts is a bottom border on the wrapper just inside each
+   cell. In a list it separates rows; on a card it is a stray line along the
+   bottom edge, so it goes. */
+html[data-xs-on] :is([data-xs-strip], [data-testid="primaryColumn"] section[role="region"] > div > div) > div > div {
+  border-bottom-width: 0 !important;
+}
